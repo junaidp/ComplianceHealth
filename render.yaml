@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: pdpl-compliance-health
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:render
+    startCommand: npm run start:render
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        value: ""

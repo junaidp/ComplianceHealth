@@ -1,0 +1,277 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                        String   @id @default(uuid()) @map("org_id")
+  name                      String   @db.VarChar(255)
+  orgType                   String   @map("org_type") @db.VarChar(100)
+  bedCount                  Int?     @map("bed_count")
+  staffSize                 Int?     @map("staff_size")
+  regionsOfOperation        String[] @map("regions_of_operation")
+  processesMinors           Boolean  @default(false) @map("processes_minors")
+  crossBorderTransfers      Boolean  @default(false) @map("cross_border_transfers")
+  usesCloud                 String   @default("no") @map("uses_cloud") @db.VarChar(20)
+  conductsResearch          Boolean  @default(false) @map("conducts_research")
+  usesAiOrAutomatedDecisions Boolean @default(false) @map("uses_ai_or_automated_decisions")
+  continuousMonitoring      Boolean  @default(false) @map("continuous_monitoring")
+  dpoAppointed              Boolean  @default(false) @map("dpo_appointed")
+  dpoName                   String?  @map("dpo_name") @db.VarChar(255)
+  dpoEmail                  String?  @map("dpo_email") @db.VarChar(255)
+  applicableRegulatoryBodies String[] @map("applicable_regulatory_bodies")
+  subscriptionTier          String   @default("starter") @map("subscription_tier") @db.VarChar(50)
+  onboardingCompleted       Boolean  @default(false) @map("onboarding_completed")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+  isDeleted                 Boolean  @default(false) @map("is_deleted")
+
+  users             User[]
+  assessments       Assessment[]
+  remediationTasks  RemediationTask[]
+  evidenceFiles     EvidenceFile[]
+  trainingRecords   TrainingRecord[]
+  auditLogs         AuditLog[]
+
+  @@map("organizations")
+}
+
+model User {
+  id             String   @id @default(uuid()) @map("user_id")
+  orgId          String   @map("org_id")
+  email          String   @unique @db.VarChar(255)
+  passwordHash   String   @map("password_hash")
+  firstName      String   @map("first_name") @db.VarChar(255)
+  lastName       String   @map("last_name") @db.VarChar(255)
+  role           String   @db.VarChar(100)
+  department     String?  @db.VarChar(255)
+  language       String   @default("en") @db.VarChar(5)
+  mfaEnabled     Boolean  @default(false) @map("mfa_enabled")
+  isActive       Boolean  @default(true) @map("is_active")
+  lastLoginAt    DateTime? @map("last_login_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+  isDeleted      Boolean  @default(false) @map("is_deleted")
+
+  organization        Organization       @relation(fields: [orgId], references: [id])
+  createdAssessments  Assessment[]       @relation("CreatedBy")
+  finalizedAssessments Assessment[]      @relation("FinalizedBy")
+  responses           Response[]         @relation("AnsweredBy")
+  responsesModified   Response[]         @relation("ModifiedBy")
+  ownedTasks          RemediationTask[]
+  evidenceFiles       EvidenceFile[]
+  trainingRecords     TrainingRecord[]
+  auditLogs           AuditLog[]
+
+  @@map("users")
+}
+
+model Control {
+  id                  String   @id @map("control_id") @db.VarChar(50)
+  source              String   @db.VarChar(20)
+  domainNumber        Int      @map("domain_number")
+  domainName          String   @map("domain_name") @db.VarChar(255)
+  ref                 String   @db.VarChar(50)
+  objectiveEn         String   @map("objective_en")
+  objectiveAr         String?  @map("objective_ar")
+  pdplArticles        String?  @map("pdpl_articles") @db.VarChar(500)
+  regArticles         String?  @map("reg_articles") @db.VarChar(500)
+  transferRegArticles String?  @map("transfer_reg_articles") @db.VarChar(500)
+  ncaRef              String?  @map("nca_ref") @db.VarChar(200)
+  mohPolicyRef        String?  @map("moh_policy_ref") @db.VarChar(200)
+  riskLevel           String   @map("risk_level") @db.VarChar(20)
+  pointsYes           Int      @map("points_yes")
+  pointsPartial       Int      @map("points_partial")
+  evidenceGuidanceEn  String?  @map("evidence_guidance_en")
+  mohImplGuidanceEn   String?  @map("moh_impl_guidance_en")
+  responsibleRoles    String[] @map("responsible_roles")
+  mandatoryForTypes   String[] @map("mandatory_for_types")
+  conditionalOn       Json?    @map("conditional_on")
+  weightMultiplier    Decimal  @default(1.0) @map("weight_multiplier") @db.Decimal(3, 1)
+  trainingModuleIds   String[] @map("training_module_ids")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  responses        Response[]
+  remediationTasks RemediationTask[]
+  evidenceFiles    EvidenceFile[]
+
+  @@map("controls")
+}
+
+model Assessment {
+  id                    String    @id @default(uuid()) @map("assessment_id")
+  orgId                 String    @map("org_id")
+  assessmentVersion     Int       @default(1) @map("assessment_version")
+  status                String    @default("DRAFT") @db.VarChar(30)
+  overallScore          Decimal?  @map("overall_score") @db.Decimal(5, 2)
+  totalControlsAssessed Int?      @map("total_controls_assessed")
+  criticalGaps          Int?      @map("critical_gaps")
+  highGaps              Int?      @map("high_gaps")
+  mediumGaps            Int?      @map("medium_gaps")
+  lowGaps               Int?      @map("low_gaps")
+  domainScores          Json?     @map("domain_scores")
+  createdBy             String    @map("created_by")
+  finalizedBy           String?   @map("finalized_by")
+  finalizedAt           DateTime? @map("finalized_at")
+  reportPdfUrl          String?   @map("report_pdf_url") @db.VarChar(1000)
+  reportXlsxUrl         String?   @map("report_xlsx_url") @db.VarChar(1000)
+  reportAuditUrl        String?   @map("report_audit_url") @db.VarChar(1000)
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  isDeleted             Boolean   @default(false) @map("is_deleted")
+
+  organization     Organization      @relation(fields: [orgId], references: [id])
+  createdByUser    User              @relation("CreatedBy", fields: [createdBy], references: [id])
+  finalizedByUser  User?             @relation("FinalizedBy", fields: [finalizedBy], references: [id])
+  responses        Response[]
+  remediationTasks RemediationTask[]
+
+  @@map("assessments")
+}
+
+model Response {
+  id              String    @id @default(uuid()) @map("response_id")
+  assessmentId    String    @map("assessment_id")
+  controlId       String    @map("control_id") @db.VarChar(50)
+  answer          String    @db.VarChar(10)
+  naJustification String?   @map("na_justification")
+  pointsEarned    Int       @default(0) @map("points_earned")
+  notes           String?
+  answeredBy      String    @map("answered_by")
+  answeredAt      DateTime  @default(now()) @map("answered_at")
+  lastModifiedBy  String?   @map("last_modified_by")
+  lastModifiedAt  DateTime? @map("last_modified_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  assessment      Assessment @relation(fields: [assessmentId], references: [id])
+  control         Control    @relation(fields: [controlId], references: [id])
+  answeredByUser  User       @relation("AnsweredBy", fields: [answeredBy], references: [id])
+  modifiedByUser  User?      @relation("ModifiedBy", fields: [lastModifiedBy], references: [id])
+
+  @@unique([assessmentId, controlId])
+  @@map("responses")
+}
+
+model RemediationTask {
+  id                         String    @id @default(uuid()) @map("task_id")
+  orgId                      String    @map("org_id")
+  assessmentId               String    @map("assessment_id")
+  controlId                  String    @map("control_id") @db.VarChar(50)
+  gapType                    String    @map("gap_type") @db.VarChar(10)
+  riskLevel                  String    @map("risk_level") @db.VarChar(20)
+  title                      String
+  status                     String    @default("OPEN") @db.VarChar(20)
+  ownerUserId                String?   @map("owner_user_id")
+  aiGuidance                 String?   @map("ai_guidance")
+  aiGeneratedAt              DateTime? @map("ai_generated_at")
+  legalBasis                 String?   @map("legal_basis")
+  evidenceRequired           Json?     @map("evidence_required")
+  responsibleRole            String?   @map("responsible_role")
+  deadline                   DateTime
+  customDeadline             DateTime? @map("custom_deadline")
+  evidenceRequiredForClosure Boolean   @default(false) @map("evidence_required_for_closure")
+  closedAt                   DateTime? @map("closed_at")
+  notes                      String?
+  createdAt                  DateTime  @default(now()) @map("created_at")
+  updatedAt                  DateTime  @updatedAt @map("updated_at")
+  isDeleted                  Boolean   @default(false) @map("is_deleted")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  assessment   Assessment   @relation(fields: [assessmentId], references: [id])
+  control      Control      @relation(fields: [controlId], references: [id])
+  owner        User?        @relation(fields: [ownerUserId], references: [id])
+
+  @@map("remediation_tasks")
+}
+
+model EvidenceFile {
+  id            String   @id @default(uuid()) @map("evidence_id")
+  orgId         String   @map("org_id")
+  controlId     String   @map("control_id") @db.VarChar(50)
+  assessmentId  String?  @map("assessment_id")
+  taskId        String?  @map("task_id")
+  filename      String   @db.VarChar(500)
+  storagePath   String   @map("storage_path") @db.VarChar(1000)
+  fileSizeBytes BigInt   @map("file_size_bytes")
+  sha256Hash    String   @map("sha256_hash") @db.VarChar(64)
+  description   String   @db.VarChar(100)
+  uploadedBy    String   @map("uploaded_by")
+  uploadedAt    DateTime @default(now()) @map("uploaded_at")
+  isReused      Boolean  @default(false) @map("is_reused")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  isDeleted     Boolean  @default(false) @map("is_deleted")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  control      Control      @relation(fields: [controlId], references: [id])
+  uploadedByUser User       @relation(fields: [uploadedBy], references: [id])
+
+  @@map("evidence_files")
+}
+
+model TrainingRecord {
+  id             String    @id @default(uuid()) @map("record_id")
+  orgId          String    @map("org_id")
+  userId         String    @map("user_id")
+  moduleId       String    @map("module_id") @db.VarChar(20)
+  role           String    @db.VarChar(100)
+  score          Decimal?  @db.Decimal(5, 2)
+  passed         Boolean?
+  attempts       Int       @default(0)
+  completedAt    DateTime? @map("completed_at")
+  expiresAt      DateTime? @map("expires_at")
+  certificateUrl String?   @map("certificate_url") @db.VarChar(1000)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@unique([userId, moduleId])
+  @@map("training_records")
+}
+
+model AuditLog {
+  id         BigInt   @id @default(autoincrement()) @map("log_id")
+  orgId      String   @map("org_id")
+  userId     String   @map("user_id")
+  action     String   @db.VarChar(100)
+  entityType String?  @map("entity_type") @db.VarChar(50)
+  entityId   String?  @map("entity_id") @db.VarChar(100)
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String   @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent")
+  timestamp  DateTime @default(now())
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+
+  @@map("audit_log")
+}
+
+model TrainingModule {
+  id              String   @id @map("module_id") @db.VarChar(20)
+  title           String   @db.VarChar(255)
+  titleAr         String?  @map("title_ar") @db.VarChar(255)
+  description     String
+  descriptionAr   String?  @map("description_ar")
+  targetRoles     String[] @map("target_roles")
+  controlsAddressed String[] @map("controls_addressed")
+  durationMinutes Int      @map("duration_minutes")
+  passScore       Int      @default(80) @map("pass_score")
+  maxAttempts     Int      @default(3) @map("max_attempts")
+  content         Json?
+  questions       Json?
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("training_modules")
+}
