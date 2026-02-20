@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:render": "npm run build && cd server && npm install && npx prisma generate && npm run build",
+    "build:render": "npm install --include=dev && npm run build && cd server && npm install && npx prisma generate && npm run build",
     "start:render": "cd server && node dist/index.js",
     "lint": "eslint .",
     "preview": "vite preview"
