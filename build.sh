@@ -8,9 +8,6 @@ echo "==> Installing server dependencies..."
 cd server
 npm install
 
-echo "==> Generating Prisma client..."
-npx prisma generate
-
 echo "==> Building server..."
 npm run build
 
